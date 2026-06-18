@@ -75,7 +75,7 @@ function AllocationRow({
     setVerdict(data.verdict);
   }
 
-  async function patch(status?: "confirmed" | "rejected") {
+  async function patch(status?: "confirmed" | "rejected" | "pending_review") {
     setBusy(true);
     try {
       const res = await fetch(`/api/allocations/${allocation.id}`, {
@@ -151,7 +151,7 @@ function AllocationRow({
         </div>
       )}
 
-      {!isFinal && (
+      {!isFinal ? (
         <div className="flex gap-2">
           <button
             onClick={() => patch("confirmed")}
@@ -168,6 +168,14 @@ function AllocationRow({
             Reject
           </button>
         </div>
+      ) : (
+        <button
+          onClick={() => patch("pending_review")}
+          disabled={busy}
+          className="rounded border px-3 py-1.5 text-xs"
+        >
+          Undo — reopen for edit
+        </button>
       )}
     </div>
   );
