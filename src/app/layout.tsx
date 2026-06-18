@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+import { DM_Serif_Display, Inter } from "next/font/google";
+import Nav from "@/components/Nav";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSerif = DM_Serif_Display({
+  weight: "400",
   subsets: ["latin"],
+  variable: "--font-dm-serif",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -24,19 +26,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">
-        <header className="border-b bg-white">
-          <nav className="mx-auto max-w-5xl flex gap-6 px-4 py-3 text-sm font-medium">
-            <Link href="/">Dashboard</Link>
-            <Link href="/upload">Upload Quote/Receipt</Link>
-            <Link href="/receipts">Receipts &amp; History</Link>
-          </nav>
+    <html lang="en" className={`${dmSerif.variable} ${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">
+        <header>
+          <Nav />
         </header>
-        <main className="flex-1 mx-auto max-w-5xl w-full px-4 py-8">{children}</main>
+        <main className="flex-1 mx-auto w-full px-8 py-8" style={{ maxWidth: 1100 }}>
+          {children}
+        </main>
       </body>
     </html>
   );

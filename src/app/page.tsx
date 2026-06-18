@@ -1,25 +1,62 @@
 import Link from "next/link";
-import { getProjectSummary } from "@/lib/budget";
+import { getProjectSummary, categoryStatus, STATUS_COLORS } from "@/lib/budget";
 import { db } from "@/db";
 import { receipts, receiptAllocations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-function money(n: number) {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+function money(n: number, opts: Intl.NumberFormatOptions = {}) {
+  return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0, ...opts });
 }
 
-function BudgetBar({ budget, committed }: { budget: number; committed: number }) {
-  const pct = budget > 0 ? Math.min(100, (committed / budget) * 100) : 0;
-  const over = committed > budget;
+function StatCard({
+  label,
+  value,
+  accent,
+  sub,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  sub?: React.ReactNode;
+}) {
   return (
-    <div className="h-2 w-full rounded-full bg-neutral-200 overflow-hidden">
+    <div
+      style={{
+        background: "#FFF",
+        borderRadius: 16,
+        padding: "20px 22px",
+        boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+        borderTop: accent ? "3px solid #00B8B8" : undefined,
+      }}
+      className="flex-1"
+    >
       <div
-        className={`h-full ${over ? "bg-red-500" : "bg-emerald-500"}`}
-        style={{ width: `${pct}%` }}
-      />
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "#A8A8A0",
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </div>
+      <div className="font-serif" style={{ fontSize: 34, color: accent ? "#009090" : "#1A1A18", lineHeight: 1 }}>
+        {value}
+      </div>
+      {sub}
     </div>
+  );
+}
+
+function CheckIcon({ color }: { color: string }) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="10 3 4.5 8.5 2 6" />
+    </svg>
   );
 }
 
@@ -32,89 +69,192 @@ export default async function Home() {
   const pendingReceiptIds = [...new Set(pendingAllocations.map((a) => a.receiptId))];
   const allReceipts = pendingReceiptIds.length > 0 ? await db.select().from(receipts) : [];
   const receiptById = new Map(allReceipts.map((r) => [r.id, r]));
-  const pendingByReceipt = pendingReceiptIds.map((rid) => ({
-    receipt: receiptById.get(rid),
-    count: pendingAllocations.filter((a) => a.receiptId === rid).length,
-  }));
+  const pendingByReceipt = pendingReceiptIds
+    .map((rid) => ({
+      receipt: receiptById.get(rid),
+      count: pendingAllocations.filter((a) => a.receiptId === rid).length,
+    }))
+    .filter((p) => p.receipt);
+
+  const pctCommitted = summary.budgetAmount > 0 ? (summary.committed / summary.budgetAmount) * 100 : 0;
+  const reviewHref =
+    pendingByReceipt.length === 1 ? `/upload?review=${pendingByReceipt[0].receipt!.id}` : "/receipts";
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="rounded-xl border bg-white p-6">
-        <h1 className="text-xl font-semibold mb-1">688 West 1420 North — Build Budget</h1>
-        <p className="text-sm text-neutral-500 mb-4">Pleasant Grove, UT · Lot 18, Makin Dreams Sub</p>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-xs text-neutral-500">Total Budget</div>
-            <div className="text-2xl font-semibold">{money(summary.budgetAmount)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-neutral-500">Committed</div>
-            <div className="text-2xl font-semibold">{money(summary.committed)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-neutral-500">{summary.remaining >= 0 ? "Remaining" : "Over Budget"}</div>
-            <div className={`text-2xl font-semibold ${summary.remaining < 0 ? "text-red-600" : "text-emerald-600"}`}>
-              {money(Math.abs(summary.remaining))}
+    <div className="flex flex-col">
+      <div style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "#009090",
+            marginBottom: 4,
+          }}
+        >
+          BUILD BUDGET · PLEASANT GROVE, UT
+        </div>
+        <div className="font-serif" style={{ fontSize: 24, color: "#1A1A18" }}>
+          688 West 1420 North
+        </div>
+      </div>
+
+      <div className="flex gap-3" style={{ marginBottom: 16 }}>
+        <StatCard label="Total Budget" value={money(summary.budgetAmount)} />
+        <StatCard label="Committed" value={money(summary.committed)} />
+        <StatCard
+          label={summary.remaining >= 0 ? "Remaining" : "Over Budget"}
+          value={money(Math.abs(summary.remaining))}
+          accent={summary.remaining >= 0}
+          sub={
+            <div className="flex items-center gap-1" style={{ marginTop: 6 }}>
+              <CheckIcon color={summary.remaining >= 0 ? "#1C9A46" : "#D9302A"} />
+              <span style={{ fontSize: 12, color: summary.remaining >= 0 ? "#1C9A46" : "#D9302A" }}>
+                {summary.remaining >= 0 ? "Under budget" : "Over budget"}
+              </span>
             </div>
-          </div>
+          }
+        />
+      </div>
+
+      <div
+        style={{
+          background: "#FFF",
+          borderRadius: 12,
+          padding: "16px 22px",
+          marginBottom: 16,
+          boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+        }}
+      >
+        <div className="flex justify-between" style={{ marginBottom: 8 }}>
+          <span style={{ fontSize: 12, color: "#A8A8A0" }}>{pctCommitted.toFixed(1)}% committed</span>
+          <span style={{ fontSize: 12, color: "#A8A8A0" }}>
+            {Math.max(0, 100 - pctCommitted).toFixed(1)}% remaining
+          </span>
         </div>
-        <div className="mt-4">
-          <BudgetBar budget={summary.budgetAmount} committed={summary.committed} />
+        <div style={{ height: 8, background: "#F0EFE9", borderRadius: 9999, overflow: "hidden" }}>
+          <div
+            style={{
+              width: `${Math.min(100, pctCommitted)}%`,
+              height: "100%",
+              background: pctCommitted > 100 ? "#D9302A" : "#00B8B8",
+              borderRadius: 9999,
+            }}
+          />
         </div>
-        {summary.remaining > 0 && (
-          <p className="mt-3 text-sm text-emerald-700">
-            You&rsquo;re tracking under budget — there&rsquo;s {money(summary.remaining)} of headroom if you want to upgrade something elsewhere.
-          </p>
-        )}
-      </section>
+      </div>
 
       {pendingByReceipt.length > 0 && (
-        <section className="rounded-xl border bg-amber-50 border-amber-200 p-6">
-          <h2 className="font-semibold mb-3">Pending Review ({pendingAllocations.length} line items)</h2>
-          <ul className="space-y-2 text-sm">
-            {pendingByReceipt.map(({ receipt, count }) =>
-              receipt ? (
-                <li key={receipt.id} className="flex justify-between">
-                  <span>
-                    {receipt.vendor ?? receipt.fileName} — {count} item{count > 1 ? "s" : ""}
-                  </span>
-                  <Link href={`/upload?review=${receipt.id}`} className="text-blue-600 underline">
-                    Review
-                  </Link>
-                </li>
-              ) : null
-            )}
-          </ul>
-        </section>
+        <div
+          style={{
+            background: "#FFFBF0",
+            border: "1px solid #EDD96A",
+            borderRadius: 12,
+            padding: "14px 20px",
+            marginBottom: 20,
+          }}
+          className="flex items-center justify-between gap-4"
+        >
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#92600A", marginBottom: 3 }}>
+              {pendingAllocations.length} line item{pendingAllocations.length > 1 ? "s" : ""} need review
+            </div>
+            <div style={{ fontSize: 13, color: "#B88040" }}>
+              {pendingByReceipt
+                .map((p) => `${p.receipt!.vendor ?? p.receipt!.fileName} · ${p.count} item${p.count > 1 ? "s" : ""}`)
+                .join("  ·  ")}
+            </div>
+          </div>
+          <Link
+            href={reviewHref}
+            style={{
+              background: "#C47B00",
+              color: "#FFF",
+              borderRadius: 9999,
+              padding: "9px 18px",
+              fontSize: 13,
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+              flex: "none",
+            }}
+          >
+            Review Now
+          </Link>
+        </div>
       )}
 
-      <section className="rounded-xl border bg-white p-6">
-        <h2 className="font-semibold mb-4">Categories</h2>
-        <div className="space-y-6">
-          {summary.categories.map((cat) => (
-            <div key={cat.id}>
-              <div className="flex justify-between items-baseline mb-1">
-                <h3 className="font-medium">{cat.name}</h3>
-                <span className="text-sm text-neutral-500">
-                  {money(cat.committed)} / {money(cat.budgetAmount)}
-                </span>
-              </div>
-              <BudgetBar budget={cat.budgetAmount} committed={cat.committed} />
-              <details className="mt-2">
-                <summary className="text-xs text-neutral-500 cursor-pointer">
-                  {cat.lineItems.length} line items
-                </summary>
-                <table className="w-full text-sm mt-2">
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: "#A8A8A0",
+          marginBottom: 12,
+        }}
+      >
+        Categories
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5" style={{ marginBottom: 8 }}>
+        {summary.categories.map((cat) => {
+          const status = categoryStatus(cat.committed, cat.budgetAmount);
+          const colors = STATUS_COLORS[status];
+          const pct = cat.budgetAmount > 0 ? Math.min(100, (cat.committed / cat.budgetAmount) * 100) : 0;
+          return (
+            <details
+              key={cat.id}
+              style={{ background: "#FFF", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,.05)" }}
+            >
+              <summary style={{ padding: 16, cursor: "pointer", listStyle: "none" }}>
+                <div className="flex justify-between items-center" style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A18" }}>{cat.name}</div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      padding: "2px 8px",
+                      borderRadius: 9999,
+                      whiteSpace: "nowrap",
+                      color: colors.text,
+                      background: colors.bg,
+                    }}
+                  >
+                    {status}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 5,
+                    background: "#F0EFE9",
+                    borderRadius: 9999,
+                    overflow: "hidden",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div style={{ width: `${pct}%`, height: "100%", background: colors.bar, borderRadius: 9999 }} />
+                </div>
+                <div style={{ fontSize: 12, color: "#6B6B65" }}>
+                  {money(cat.committed)} <span style={{ color: "#A8A8A0" }}>/ {money(cat.budgetAmount)}</span>
+                </div>
+              </summary>
+              <div style={{ padding: "0 16px 14px" }}>
+                <table className="w-full" style={{ fontSize: 12 }}>
                   <tbody>
                     {cat.lineItems.map((li) => (
-                      <tr key={li.id} className="border-t">
-                        <td className="py-1">{li.name}</td>
-                        <td className="py-1 text-right text-neutral-500">{money(li.budgetAmount)}</td>
-                        <td className="py-1 text-right">{money(li.committed)}</td>
+                      <tr key={li.id} style={{ borderTop: "1px solid #F0EFE9" }}>
+                        <td style={{ padding: "5px 0", color: "#1A1A18" }}>{li.name}</td>
+                        <td style={{ padding: "5px 0", textAlign: "right", color: "#A8A8A0" }}>
+                          {money(li.budgetAmount)}
+                        </td>
                         <td
-                          className={`py-1 text-right font-medium ${
-                            li.remaining < 0 ? "text-red-600" : "text-neutral-700"
-                          }`}
+                          style={{
+                            padding: "5px 0",
+                            textAlign: "right",
+                            fontWeight: 500,
+                            color: li.remaining < 0 ? "#D9302A" : "#1A1A18",
+                          }}
                         >
                           {money(li.remaining)}
                         </td>
@@ -122,11 +262,11 @@ export default async function Home() {
                     ))}
                   </tbody>
                 </table>
-              </details>
-            </div>
-          ))}
-        </div>
-      </section>
+              </div>
+            </details>
+          );
+        })}
+      </div>
     </div>
   );
 }

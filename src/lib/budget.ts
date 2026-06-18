@@ -86,6 +86,23 @@ export async function getProjectSummary(): Promise<ProjectSummary> {
   };
 }
 
+export type CategoryStatus = "Complete" | "Over Budget" | "At Risk" | "On Track";
+
+export function categoryStatus(committed: number, budgetAmount: number): CategoryStatus {
+  if (budgetAmount > 0 && committed > budgetAmount) return "Over Budget";
+  const pct = budgetAmount > 0 ? (committed / budgetAmount) * 100 : 0;
+  if (pct >= 100) return "Complete";
+  if (pct >= 90) return "At Risk";
+  return "On Track";
+}
+
+export const STATUS_COLORS: Record<CategoryStatus, { bar: string; text: string; bg: string }> = {
+  Complete: { bar: "#1C9A46", text: "#1C9A46", bg: "#EEFBF2" },
+  "On Track": { bar: "#00B8B8", text: "#1C9A46", bg: "#EEFBF2" },
+  "At Risk": { bar: "#D4860A", text: "#C47B00", bg: "#FFF8E8" },
+  "Over Budget": { bar: "#D9302A", text: "#D9302A", bg: "#FFF0EF" },
+};
+
 export type Verdict = {
   recommendation: "go" | "over_budget" | "review";
   lineItem: { budgetAmount: number; committedBefore: number; quoteAmount: number; remainingAfter: number };
