@@ -241,25 +241,80 @@ export default async function Home() {
               </summary>
               <div style={{ padding: "0 16px 14px" }}>
                 <table className="w-full" style={{ fontSize: 12 }}>
+                  <thead>
+                    <tr>
+                      <td />
+                      <td
+                        style={{
+                          textAlign: "right",
+                          color: "#A8A8A0",
+                          fontSize: 10,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          paddingBottom: 4,
+                        }}
+                      >
+                        Budget
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "right",
+                          color: "#A8A8A0",
+                          fontSize: 10,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          paddingBottom: 4,
+                        }}
+                      >
+                        Spent
+                      </td>
+                      <td
+                        style={{
+                          textAlign: "right",
+                          color: "#A8A8A0",
+                          fontSize: 10,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          paddingBottom: 4,
+                        }}
+                      >
+                        Left
+                      </td>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {cat.lineItems.map((li) => (
-                      <tr key={li.id} style={{ borderTop: "1px solid #F0EFE9" }}>
-                        <td style={{ padding: "5px 0", color: "#1A1A18" }}>{li.name}</td>
-                        <td style={{ padding: "5px 0", textAlign: "right", color: "#A8A8A0" }}>
-                          {money(li.budgetAmount)}
-                        </td>
-                        <td
-                          style={{
-                            padding: "5px 0",
-                            textAlign: "right",
-                            fontWeight: 500,
-                            color: li.remaining < 0 ? "#D9302A" : "#1A1A18",
-                          }}
-                        >
-                          {money(li.remaining)}
-                        </td>
-                      </tr>
-                    ))}
+                    {cat.lineItems.map((li) => {
+                      const over = li.remaining < 0;
+                      const leftColor = over ? "#D9302A" : li.committed > 0 ? "#1C9A46" : "#A8A8A0";
+                      return (
+                        <tr key={li.id} style={{ borderTop: "1px solid #F0EFE9" }}>
+                          <td style={{ padding: "5px 0", color: "#1A1A18" }}>{li.name}</td>
+                          <td style={{ padding: "5px 0", textAlign: "right", color: "#A8A8A0" }}>
+                            {money(li.budgetAmount)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "5px 0",
+                              textAlign: "right",
+                              fontWeight: over ? 700 : 500,
+                              color: over ? "#D9302A" : "#1A1A18",
+                            }}
+                          >
+                            {money(li.committed)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "5px 0",
+                              textAlign: "right",
+                              fontWeight: over ? 700 : 500,
+                              color: leftColor,
+                            }}
+                          >
+                            {over ? `−${money(Math.abs(li.remaining))}` : money(li.remaining)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
