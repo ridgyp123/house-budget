@@ -316,6 +316,33 @@ export default async function Home() {
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    {(() => {
+                      const catOver = cat.remaining < 0;
+                      const catLeftColor = catOver ? "#D9302A" : cat.committed > 0 ? "#1C9A46" : "#A8A8A0";
+                      return (
+                        <tr style={{ borderTop: "2px solid #1A1A18" }}>
+                          <td style={{ padding: "7px 0", fontWeight: 700, color: "#1A1A18" }}>Total</td>
+                          <td style={{ padding: "7px 0", textAlign: "right", fontWeight: 700, color: "#1A1A18" }}>
+                            {money(cat.budgetAmount)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "7px 0",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              color: catOver ? "#D9302A" : "#1A1A18",
+                            }}
+                          >
+                            {money(cat.committed)}
+                          </td>
+                          <td style={{ padding: "7px 0", textAlign: "right", fontWeight: 700, color: catLeftColor }}>
+                            {catOver ? `−${money(Math.abs(cat.remaining))}` : money(cat.remaining)}
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                  </tfoot>
                 </table>
               </div>
             </details>
