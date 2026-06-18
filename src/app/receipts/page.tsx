@@ -37,7 +37,7 @@ export default async function ReceiptsPage() {
           const total = allocations.reduce((s, a) => s + Number(a.amount), 0);
           return (
             <div key={r.id} className="rounded-xl border bg-white p-5">
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                 <div>
                   <div className="font-medium">{r.vendor ?? r.fileName}</div>
                   <div className="text-xs text-neutral-500">
@@ -59,24 +59,26 @@ export default async function ReceiptsPage() {
                   </Link>
                 </div>
               </div>
-              <table className="w-full text-sm">
-                <tbody>
-                  {allocations.map((a) => (
-                    <tr key={a.id} className="border-t">
-                      <td className="py-1.5">{a.description}</td>
-                      <td className="py-1.5 text-neutral-500">
-                        {a.lineItemId != null ? lineItemById.get(a.lineItemId)?.name ?? "—" : "Unmatched"}
-                      </td>
-                      <td className="py-1.5 text-right">{money(Number(a.amount))}</td>
-                      <td className="py-1.5 text-right">
-                        <span className={`text-xs rounded border px-2 py-0.5 ${statusBadge(a.status)}`}>
-                          {a.status.replace("_", " ")}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-sm" style={{ minWidth: 480 }}>
+                  <tbody>
+                    {allocations.map((a) => (
+                      <tr key={a.id} className="border-t">
+                        <td className="py-1.5 px-1">{a.description}</td>
+                        <td className="py-1.5 px-1 text-neutral-500 whitespace-nowrap">
+                          {a.lineItemId != null ? lineItemById.get(a.lineItemId)?.name ?? "—" : "Unmatched"}
+                        </td>
+                        <td className="py-1.5 px-1 text-right whitespace-nowrap">{money(Number(a.amount))}</td>
+                        <td className="py-1.5 px-1 text-right whitespace-nowrap">
+                          <span className={`text-xs rounded border px-2 py-0.5 ${statusBadge(a.status)}`}>
+                            {a.status.replace("_", " ")}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           );
         })}

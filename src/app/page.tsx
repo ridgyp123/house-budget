@@ -100,7 +100,7 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="flex gap-3" style={{ marginBottom: 16 }}>
+      <div className="flex flex-col sm:flex-row gap-3" style={{ marginBottom: 16 }}>
         <StatCard label="Total Budget" value={money(summary.budgetAmount)} />
         <StatCard label="Committed" value={money(summary.committed)} />
         <StatCard
@@ -154,7 +154,7 @@ export default async function Home() {
             padding: "14px 20px",
             marginBottom: 20,
           }}
-          className="flex items-center justify-between gap-4"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
         >
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#92600A", marginBottom: 3 }}>
@@ -177,6 +177,7 @@ export default async function Home() {
               fontWeight: 600,
               whiteSpace: "nowrap",
               flex: "none",
+              textAlign: "center",
             }}
           >
             Review Now
@@ -197,7 +198,7 @@ export default async function Home() {
         Categories
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5" style={{ marginBottom: 8 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" style={{ marginBottom: 8 }}>
         {summary.categories.map((cat) => {
           const status = categoryStatus(cat.committed, cat.budgetAmount);
           const colors = STATUS_COLORS[status];
@@ -338,6 +339,35 @@ export default async function Home() {
                           </td>
                           <td style={{ padding: "7px 0", textAlign: "right", fontWeight: 700, color: catLeftColor }}>
                             {catOver ? `−${money(Math.abs(cat.remaining))}` : money(cat.remaining)}
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                    {(() => {
+                      const executed = cat.lineItems.filter((li) => li.committed > 0);
+                      if (executed.length === 0) return null;
+                      const realized = executed.reduce((s, li) => s + (li.budgetAmount - li.committed), 0);
+                      const positive = realized >= 0;
+                      return (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            style={{ padding: "6px 0 0", fontSize: 11, color: "#6B6B65" }}
+                          >
+                            Surplus/deficit on {executed.length} executed item{executed.length > 1 ? "s" : ""} —
+                            reallocatable if positive
+                          </td>
+                          <td
+                            style={{
+                              padding: "6px 0 0",
+                              textAlign: "right",
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: positive ? "#1C9A46" : "#D9302A",
+                            }}
+                          >
+                            {positive ? "+" : "−"}
+                            {money(Math.abs(realized))}
                           </td>
                         </tr>
                       );

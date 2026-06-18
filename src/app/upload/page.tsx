@@ -227,7 +227,7 @@ function AllocationRow({
         opacity: isFinal ? 0.55 : 1,
       }}
     >
-      <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
+      <div className="flex flex-wrap justify-between items-start gap-2" style={{ marginBottom: 12 }}>
         <span style={{ fontSize: 14, fontWeight: 500, color: "#1A1A18" }}>{allocation.description}</span>
         <span
           style={{
@@ -245,7 +245,7 @@ function AllocationRow({
         </span>
       </div>
 
-      <div className="flex gap-2.5" style={{ marginBottom: 10 }}>
+      <div className="flex flex-col sm:flex-row gap-2.5" style={{ marginBottom: 10 }}>
         <FieldBox label="Amount" flex={1} editable={!isFinal}>
           <input
             type="number"
@@ -507,7 +507,7 @@ function UploadPageInner() {
               marginBottom: 14,
               boxShadow: "0 1px 4px rgba(0,0,0,.06)",
             }}
-            className="flex items-center justify-between gap-4"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <div className="flex items-center gap-3">
               <div
@@ -528,7 +528,7 @@ function UploadPageInner() {
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: "right", flex: "none" }}>
+            <div style={{ flex: "none" }} className="text-left sm:text-right">
               <div className="font-serif" style={{ fontSize: 28, color: "#1A1A18", marginBottom: 8 }}>
                 {money(total)}
               </div>

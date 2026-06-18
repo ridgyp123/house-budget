@@ -31,7 +31,7 @@ export default function RootLayout({
         <header>
           <Nav />
         </header>
-        <main className="flex-1 mx-auto w-full px-8 py-8" style={{ maxWidth: 1100 }}>
+        <main className="flex-1 mx-auto w-full px-4 sm:px-8 py-6 sm:py-8" style={{ maxWidth: 1100 }}>
           {children}
         </main>
       </body>
