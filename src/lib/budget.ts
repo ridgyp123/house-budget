@@ -23,6 +23,8 @@ export type ProjectSummary = {
   budgetAmount: number;
   committed: number;
   remaining: number;
+  realizedSurplus: number;
+  executedCount: number;
   categories: CategorySummary[];
 };
 
@@ -78,10 +80,15 @@ export async function getProjectSummary(): Promise<ProjectSummary> {
   const budgetAmount = categorySummaries.reduce((s, c) => s + c.budgetAmount, 0);
   const committed = categorySummaries.reduce((s, c) => s + c.committed, 0);
 
+  const allExecuted = categorySummaries.flatMap((c) => c.lineItems).filter((li) => li.committed > 0);
+  const realizedSurplus = allExecuted.reduce((s, li) => s + (li.budgetAmount - li.committed), 0);
+
   return {
     budgetAmount,
     committed,
     remaining: budgetAmount - committed,
+    realizedSurplus,
+    executedCount: allExecuted.length,
     categories: categorySummaries,
   };
 }

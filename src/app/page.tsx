@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getProjectSummary, categoryStatus, STATUS_COLORS } from "@/lib/budget";
+import { getProjectSummary } from "@/lib/budget";
 import { db } from "@/db";
 import { receipts, receiptAllocations } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { DashboardCategories } from "@/components/DashboardCategories";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,17 @@ export default async function Home() {
             </div>
           }
         />
+        {summary.executedCount > 0 && (
+          <StatCard
+            label={summary.realizedSurplus >= 0 ? "Realized Surplus" : "Realized Deficit"}
+            value={(summary.realizedSurplus >= 0 ? "+" : "−") + money(Math.abs(summary.realizedSurplus))}
+            sub={
+              <div style={{ marginTop: 6, fontSize: 11, color: "#A8A8A0" }}>
+                on {summary.executedCount} executed item{summary.executedCount !== 1 ? "s" : ""}
+              </div>
+            }
+          />
+        )}
       </div>
 
       <div
@@ -198,187 +210,7 @@ export default async function Home() {
         Categories
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" style={{ marginBottom: 8 }}>
-        {summary.categories.map((cat) => {
-          const status = categoryStatus(cat.committed, cat.budgetAmount);
-          const colors = STATUS_COLORS[status];
-          const pct = cat.budgetAmount > 0 ? Math.min(100, (cat.committed / cat.budgetAmount) * 100) : 0;
-          return (
-            <details
-              key={cat.id}
-              style={{ background: "#FFF", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,.05)" }}
-            >
-              <summary style={{ padding: 16, cursor: "pointer", listStyle: "none" }}>
-                <div className="flex justify-between items-center" style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1A1A18" }}>{cat.name}</div>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 500,
-                      padding: "2px 8px",
-                      borderRadius: 9999,
-                      whiteSpace: "nowrap",
-                      color: colors.text,
-                      background: colors.bg,
-                    }}
-                  >
-                    {status}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    height: 5,
-                    background: "#F0EFE9",
-                    borderRadius: 9999,
-                    overflow: "hidden",
-                    marginBottom: 8,
-                  }}
-                >
-                  <div style={{ width: `${pct}%`, height: "100%", background: colors.bar, borderRadius: 9999 }} />
-                </div>
-                <div style={{ fontSize: 12, color: "#6B6B65" }}>
-                  {money(cat.committed)} <span style={{ color: "#A8A8A0" }}>/ {money(cat.budgetAmount)}</span>
-                </div>
-              </summary>
-              <div style={{ padding: "0 16px 14px" }}>
-                <table className="w-full" style={{ fontSize: 12 }}>
-                  <thead>
-                    <tr>
-                      <td />
-                      <td
-                        style={{
-                          textAlign: "right",
-                          color: "#A8A8A0",
-                          fontSize: 10,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          paddingBottom: 4,
-                        }}
-                      >
-                        Budget
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "right",
-                          color: "#A8A8A0",
-                          fontSize: 10,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          paddingBottom: 4,
-                        }}
-                      >
-                        Spent
-                      </td>
-                      <td
-                        style={{
-                          textAlign: "right",
-                          color: "#A8A8A0",
-                          fontSize: 10,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          paddingBottom: 4,
-                        }}
-                      >
-                        Left
-                      </td>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cat.lineItems.map((li) => {
-                      const over = li.remaining < 0;
-                      const leftColor = over ? "#D9302A" : li.committed > 0 ? "#1C9A46" : "#A8A8A0";
-                      return (
-                        <tr key={li.id} style={{ borderTop: "1px solid #F0EFE9" }}>
-                          <td style={{ padding: "5px 0", color: "#1A1A18" }}>{li.name}</td>
-                          <td style={{ padding: "5px 0", textAlign: "right", color: "#A8A8A0" }}>
-                            {money(li.budgetAmount)}
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 0",
-                              textAlign: "right",
-                              fontWeight: over ? 700 : 500,
-                              color: over ? "#D9302A" : "#1A1A18",
-                            }}
-                          >
-                            {money(li.committed)}
-                          </td>
-                          <td
-                            style={{
-                              padding: "5px 0",
-                              textAlign: "right",
-                              fontWeight: over ? 700 : 500,
-                              color: leftColor,
-                            }}
-                          >
-                            {over ? `−${money(Math.abs(li.remaining))}` : money(li.remaining)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    {(() => {
-                      const catOver = cat.remaining < 0;
-                      const catLeftColor = catOver ? "#D9302A" : cat.committed > 0 ? "#1C9A46" : "#A8A8A0";
-                      return (
-                        <tr style={{ borderTop: "2px solid #1A1A18" }}>
-                          <td style={{ padding: "7px 0", fontWeight: 700, color: "#1A1A18" }}>Total</td>
-                          <td style={{ padding: "7px 0", textAlign: "right", fontWeight: 700, color: "#1A1A18" }}>
-                            {money(cat.budgetAmount)}
-                          </td>
-                          <td
-                            style={{
-                              padding: "7px 0",
-                              textAlign: "right",
-                              fontWeight: 700,
-                              color: catOver ? "#D9302A" : "#1A1A18",
-                            }}
-                          >
-                            {money(cat.committed)}
-                          </td>
-                          <td style={{ padding: "7px 0", textAlign: "right", fontWeight: 700, color: catLeftColor }}>
-                            {catOver ? `−${money(Math.abs(cat.remaining))}` : money(cat.remaining)}
-                          </td>
-                        </tr>
-                      );
-                    })()}
-                    {(() => {
-                      const executed = cat.lineItems.filter((li) => li.committed > 0);
-                      if (executed.length === 0) return null;
-                      const realized = executed.reduce((s, li) => s + (li.budgetAmount - li.committed), 0);
-                      const positive = realized >= 0;
-                      return (
-                        <tr>
-                          <td
-                            colSpan={3}
-                            style={{ padding: "6px 0 0", fontSize: 11, color: "#6B6B65" }}
-                          >
-                            Surplus/deficit on {executed.length} executed item{executed.length > 1 ? "s" : ""} —
-                            reallocatable if positive
-                          </td>
-                          <td
-                            style={{
-                              padding: "6px 0 0",
-                              textAlign: "right",
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: positive ? "#1C9A46" : "#D9302A",
-                            }}
-                          >
-                            {positive ? "+" : "−"}
-                            {money(Math.abs(realized))}
-                          </td>
-                        </tr>
-                      );
-                    })()}
-                  </tfoot>
-                </table>
-              </div>
-            </details>
-          );
-        })}
-      </div>
+      <DashboardCategories categories={summary.categories} />
     </div>
   );
 }
