@@ -5,6 +5,7 @@ import { categoryStatus, STATUS_COLORS } from "@/lib/budget";
 import type { CategorySummary, LineItemSummary } from "@/lib/budget";
 
 type QuoteRow = { id: number; label: string | null; url: string; amount: string; qty: number; };
+type EditState = { label: string; url: string; amount: string; qty: string };
 
 function QuotesSection({ lineItemId }: { lineItemId: number }) {
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);
@@ -14,6 +15,8 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
   const [qty, setQty] = useState("1");
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editState, setEditState] = useState<EditState>({ label: "", url: "", amount: "", qty: "1" });
 
   const load = useCallback(() => {
     fetch(`/api/line-items/${lineItemId}/quotes`)
@@ -44,6 +47,31 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
     load();
   }
 
+  function startEdit(q: QuoteRow) {
+    setEditingId(q.id);
+    setEditState({ label: q.label ?? "", url: q.url, amount: q.amount, qty: String(q.qty) });
+  }
+
+  async function saveEdit(id: number) {
+    setBusy(true);
+    try {
+      await fetch(`/api/quotes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: editState.label || null,
+          url: editState.url,
+          amount: Number(editState.amount),
+          qty: Number(editState.qty) || 1,
+        }),
+      });
+      setEditingId(null);
+      load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{ marginTop: quotes.length || adding ? 8 : 0 }}>
       {quotes.length > 0 && (
@@ -51,31 +79,85 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
           <div style={{ fontSize: 10, fontWeight: 600, color: "#A8A8A0", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
             Shopping / Forecasting
           </div>
-          {quotes.map((q) => (
-            <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, fontSize: 12 }}>
-              <a
-                href={q.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#009090", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-              >
-                {q.label || q.url}
-              </a>
-              <span style={{ color: "#A8A8A0", whiteSpace: "nowrap" }}>
-                {q.qty} × {Number(q.amount).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
-              </span>
-              <span style={{ fontWeight: 600, color: "#1A1A18", whiteSpace: "nowrap" }}>
-                {(q.qty * Number(q.amount)).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
-              </span>
-              <button
-                onClick={() => deleteQuote(q.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#C0BDB5", fontSize: 14, lineHeight: 1, padding: "0 2px" }}
-                title="Remove"
-              >
-                ×
-              </button>
-            </div>
-          ))}
+          {quotes.map((q) =>
+            editingId === q.id ? (
+              <div key={q.id} style={{ display: "flex", flexDirection: "column", gap: 5, padding: "8px 10px", background: "#F5F4EF", borderRadius: 8, marginBottom: 6 }}>
+                <input
+                  placeholder="Label"
+                  value={editState.label}
+                  onChange={(e) => setEditState((s) => ({ ...s, label: e.target.value }))}
+                  style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none" }}
+                />
+                <input
+                  placeholder="URL"
+                  value={editState.url}
+                  onChange={(e) => setEditState((s) => ({ ...s, url: e.target.value }))}
+                  style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none" }}
+                />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input
+                    type="number"
+                    placeholder="Qty"
+                    value={editState.qty}
+                    min={1}
+                    onChange={(e) => setEditState((s) => ({ ...s, qty: e.target.value }))}
+                    style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none", width: 60 }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    value={editState.amount}
+                    onChange={(e) => setEditState((s) => ({ ...s, amount: e.target.value }))}
+                    style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none", width: 100 }}
+                  />
+                  <button
+                    onClick={() => saveEdit(q.id)}
+                    disabled={busy || !editState.url || !editState.amount}
+                    style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "#009090", color: "#FFF", border: "none", cursor: "pointer", opacity: busy ? 0.5 : 1 }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "transparent", color: "#6B6B65", border: "1px solid #E0DFD9", cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, fontSize: 12 }}>
+                <a
+                  href={q.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "#009090", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                >
+                  {q.label || q.url}
+                </a>
+                <span style={{ color: "#A8A8A0", whiteSpace: "nowrap" }}>
+                  {q.qty} × {Number(q.amount).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                </span>
+                <span style={{ fontWeight: 600, color: "#1A1A18", whiteSpace: "nowrap" }}>
+                  {(q.qty * Number(q.amount)).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                </span>
+                <button
+                  onClick={() => startEdit(q)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#C0BDB5", fontSize: 11, lineHeight: 1, padding: "0 2px" }}
+                  title="Edit"
+                >
+                  ✎
+                </button>
+                <button
+                  onClick={() => deleteQuote(q.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#C0BDB5", fontSize: 14, lineHeight: 1, padding: "0 2px" }}
+                  title="Remove"
+                >
+                  ×
+                </button>
+              </div>
+            )
+          )}
           {quotes.length > 1 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid #E8E7E1", paddingTop: 5, marginTop: 2, fontSize: 12 }}>
               <span style={{ flex: 1, color: "#6B6B65" }}>Forecast total</span>
