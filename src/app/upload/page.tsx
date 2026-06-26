@@ -161,6 +161,7 @@ function AllocationRow({
   const [amount, setAmount] = useState(allocation.amount);
   const [verdict, setVerdict] = useState<Verdict | null>(allocation.verdict);
   const [busy, setBusy] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   async function recalc(nextLineItemId: number | "", nextAmount: string) {
     if (nextLineItemId === "" || !nextAmount) {
@@ -189,13 +190,16 @@ function AllocationRow({
         }),
       });
       const data = await res.json();
+      setIsDirty(false);
       onUpdated(data.allocation);
     } finally {
       setBusy(false);
     }
   }
 
-  const isFinal = allocation.status === "confirmed" || allocation.status === "rejected";
+  const isConfirmed = allocation.status === "confirmed";
+  const isRejected = allocation.status === "rejected";
+  const isFinal = isRejected; // only rejected items lock fields; confirmed stays editable
 
   const badge =
     allocation.status === "confirmed"
@@ -224,7 +228,7 @@ function AllocationRow({
         marginBottom: 10,
         borderLeft: `4px solid ${borderColor}`,
         boxShadow: "0 1px 3px rgba(0,0,0,.04)",
-        opacity: isFinal ? 0.55 : 1,
+        opacity: isRejected ? 0.55 : 1,
       }}
     >
       <div className="flex flex-wrap justify-between items-start gap-2" style={{ marginBottom: 12 }}>
@@ -253,6 +257,7 @@ function AllocationRow({
             value={amount}
             onChange={(e) => {
               setAmount(e.target.value);
+              setIsDirty(true);
               recalc(lineItemId, e.target.value);
             }}
             style={{
@@ -272,6 +277,7 @@ function AllocationRow({
             onChange={(e) => {
               const v = e.target.value ? Number(e.target.value) : "";
               setLineItemId(v);
+              setIsDirty(true);
               recalc(v, amount);
             }}
             style={{
@@ -315,7 +321,57 @@ function AllocationRow({
         </div>
       )}
 
-      {!isFinal ? (
+      {isConfirmed ? (
+        <div className="flex gap-2">
+          {isDirty && (
+            <button
+              onClick={() => patch("confirmed")}
+              disabled={busy || lineItemId === "" || !amount}
+              style={{
+                background: "#00B8B8",
+                color: "#FFF",
+                border: "none",
+                borderRadius: 9999,
+                padding: "9px 20px",
+                fontSize: 13,
+                fontWeight: 600,
+                opacity: busy || lineItemId === "" || !amount ? 0.4 : 1,
+              }}
+            >
+              Save changes
+            </button>
+          )}
+          <button
+            onClick={() => patch("pending_review")}
+            disabled={busy}
+            style={{
+              background: "transparent",
+              color: "#1A1A18",
+              border: "1.5px solid #DDDDD0",
+              borderRadius: 9999,
+              padding: "9px 20px",
+              fontSize: 13,
+            }}
+          >
+            Undo — reopen for edit
+          </button>
+        </div>
+      ) : isRejected ? (
+        <button
+          onClick={() => patch("pending_review")}
+          disabled={busy}
+          style={{
+            background: "transparent",
+            color: "#1A1A18",
+            border: "1.5px solid #DDDDD0",
+            borderRadius: 9999,
+            padding: "9px 20px",
+            fontSize: 13,
+          }}
+        >
+          Undo — reopen for edit
+        </button>
+      ) : (
         <div className="flex gap-2">
           <button
             onClick={() => patch("confirmed")}
@@ -348,21 +404,6 @@ function AllocationRow({
             Reject
           </button>
         </div>
-      ) : (
-        <button
-          onClick={() => patch("pending_review")}
-          disabled={busy}
-          style={{
-            background: "transparent",
-            color: "#1A1A18",
-            border: "1.5px solid #DDDDD0",
-            borderRadius: 9999,
-            padding: "9px 20px",
-            fontSize: 13,
-          }}
-        >
-          Undo — reopen for edit
-        </button>
       )}
     </div>
   );
