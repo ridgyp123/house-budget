@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { categoryStatus, STATUS_COLORS } from "@/lib/budget";
 import type { CategorySummary, LineItemSummary } from "@/lib/budget";
 
-type QuoteRow = { id: number; label: string | null; url: string; amount: string; };
+type QuoteRow = { id: number; label: string | null; url: string; amount: string; qty: number; };
 
 function QuotesSection({ lineItemId }: { lineItemId: number }) {
   const [quotes, setQuotes] = useState<QuoteRow[]>([]);
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [amount, setAmount] = useState("");
+  const [qty, setQty] = useState("1");
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -29,9 +30,9 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
       await fetch(`/api/line-items/${lineItemId}/quotes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: label || null, url, amount: Number(amount) }),
+        body: JSON.stringify({ label: label || null, url, amount: Number(amount), qty: Number(qty) || 1 }),
       });
-      setLabel(""); setUrl(""); setAmount(""); setAdding(false);
+      setLabel(""); setUrl(""); setAmount(""); setQty("1"); setAdding(false);
       load();
     } finally {
       setBusy(false);
@@ -60,8 +61,11 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
               >
                 {q.label || q.url}
               </a>
+              <span style={{ color: "#A8A8A0", whiteSpace: "nowrap" }}>
+                {q.qty} × {Number(q.amount).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+              </span>
               <span style={{ fontWeight: 600, color: "#1A1A18", whiteSpace: "nowrap" }}>
-                {Number(q.amount).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                {(q.qty * Number(q.amount)).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
               </span>
               <button
                 onClick={() => deleteQuote(q.id)}
@@ -75,8 +79,9 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
           {quotes.length > 1 && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid #E8E7E1", paddingTop: 5, marginTop: 2, fontSize: 12 }}>
               <span style={{ flex: 1, color: "#6B6B65" }}>Forecast total</span>
+              <span style={{ color: "#A8A8A0" }} />
               <span style={{ fontWeight: 700, color: "#1A1A18" }}>
-                {quotes.reduce((s, q) => s + Number(q.amount), 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                {quotes.reduce((s, q) => s + q.qty * Number(q.amount), 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
               </span>
               <span style={{ width: 18 }} />
             </div>
@@ -101,6 +106,14 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
           <div style={{ display: "flex", gap: 6 }}>
             <input
               type="number"
+              placeholder="Qty"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              min={1}
+              style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none", width: 60 }}
+            />
+            <input
+              type="number"
               placeholder="Price"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -114,7 +127,7 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
               Save
             </button>
             <button
-              onClick={() => { setAdding(false); setLabel(""); setUrl(""); setAmount(""); }}
+              onClick={() => { setAdding(false); setLabel(""); setUrl(""); setAmount(""); setQty("1"); }}
               style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "transparent", color: "#6B6B65", border: "1px solid #E0DFD9", cursor: "pointer" }}
             >
               Cancel
