@@ -1,8 +1,128 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { categoryStatus, STATUS_COLORS } from "@/lib/budget";
 import type { CategorySummary, LineItemSummary } from "@/lib/budget";
+
+type QuoteRow = { id: number; label: string | null; url: string; amount: string; };
+
+function QuotesSection({ lineItemId }: { lineItemId: number }) {
+  const [quotes, setQuotes] = useState<QuoteRow[]>([]);
+  const [label, setLabel] = useState("");
+  const [url, setUrl] = useState("");
+  const [amount, setAmount] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    fetch(`/api/line-items/${lineItemId}/quotes`)
+      .then((r) => r.json())
+      .then((d) => setQuotes(d.quotes ?? []));
+  }, [lineItemId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function addQuote() {
+    if (!url || !amount) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/line-items/${lineItemId}/quotes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: label || null, url, amount: Number(amount) }),
+      });
+      setLabel(""); setUrl(""); setAmount(""); setAdding(false);
+      load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteQuote(id: number) {
+    await fetch(`/api/quotes/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  return (
+    <div style={{ marginTop: quotes.length || adding ? 8 : 0 }}>
+      {quotes.length > 0 && (
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "#A8A8A0", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+            Shopping / Forecasting
+          </div>
+          {quotes.map((q) => (
+            <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, fontSize: 12 }}>
+              <a
+                href={q.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#009090", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              >
+                {q.label || q.url}
+              </a>
+              <span style={{ fontWeight: 600, color: "#1A1A18", whiteSpace: "nowrap" }}>
+                {Number(q.amount).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+              </span>
+              <button
+                onClick={() => deleteQuote(q.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#C0BDB5", fontSize: 14, lineHeight: 1, padding: "0 2px" }}
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adding ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 10px", background: "#F5F4EF", borderRadius: 8 }}>
+          <input
+            placeholder="Label (e.g. KitchenAid KFDC500JSS at Best Buy)"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none" }}
+          />
+          <input
+            placeholder="URL"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none" }}
+          />
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              type="number"
+              placeholder="Price"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #E0DFD9", outline: "none", width: 100 }}
+            />
+            <button
+              onClick={addQuote}
+              disabled={busy || !url || !amount}
+              style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "#009090", color: "#FFF", border: "none", cursor: busy || !url || !amount ? "default" : "pointer", opacity: busy || !url || !amount ? 0.5 : 1 }}
+            >
+              Save
+            </button>
+            <button
+              onClick={() => { setAdding(false); setLabel(""); setUrl(""); setAmount(""); }}
+              style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "transparent", color: "#6B6B65", border: "1px solid #E0DFD9", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          style={{ fontSize: 11, color: "#009090", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+        >
+          + Add link / price
+        </button>
+      )}
+    </div>
+  );
+}
 
 function money(n: number) {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -48,19 +168,16 @@ function LineItemRow({
         style={{
           borderTop: "1px solid #F0EFE9",
           background: isMatch ? "#F0FAFA" : undefined,
-          cursor: li.notes ? "pointer" : undefined,
+          cursor: "pointer",
         }}
-        onClick={() => li.notes && setExpanded((v) => !v)}
-        title={li.notes ? (expanded ? "Hide note" : "Show note") : undefined}
+        onClick={() => setExpanded((v) => !v)}
       >
         <td style={{ padding: "5px 4px 5px 0", color: "#1A1A18" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
             {li.name}
-            {li.notes && (
-              <span style={{ fontSize: 9, color: "#A8A8A0", userSelect: "none" }}>
-                {expanded ? "▲" : "▼"}
-              </span>
-            )}
+            <span style={{ fontSize: 9, color: "#A8A8A0", userSelect: "none" }}>
+              {expanded ? "▲" : "▼"}
+            </span>
           </span>
         </td>
         <td style={{ padding: "5px 0", textAlign: "right", color: "#A8A8A0" }}>
@@ -73,20 +190,19 @@ function LineItemRow({
           {over ? `−${money(Math.abs(li.remaining))}` : money(li.remaining)}
         </td>
       </tr>
-      {expanded && li.notes && (
+      {expanded && (
         <tr style={{ background: "#FAFAF7" }}>
           <td
             colSpan={4}
-            style={{
-              padding: "6px 8px 8px",
-              fontSize: 11,
-              color: "#6B6B65",
-              borderTop: "1px solid #F0EFE9",
-              fontStyle: "italic",
-              lineHeight: 1.5,
-            }}
+            style={{ padding: "8px 10px 10px", borderTop: "1px solid #F0EFE9" }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {li.notes}
+            {li.notes && (
+              <div style={{ fontSize: 11, color: "#6B6B65", fontStyle: "italic", lineHeight: 1.5, marginBottom: 8 }}>
+                {li.notes}
+              </div>
+            )}
+            <QuotesSection lineItemId={li.id} />
           </td>
         </tr>
       )}

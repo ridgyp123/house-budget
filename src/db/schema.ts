@@ -38,6 +38,18 @@ export const receipts = pgTable("receipts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// A product link/price the Paynes are considering for a line item — not a commitment.
+export const lineItemQuotes = pgTable("line_item_quotes", {
+  id: serial("id").primaryKey(),
+  lineItemId: integer("line_item_id")
+    .notNull()
+    .references(() => lineItems.id, { onDelete: "cascade" }),
+  label: text("label"),
+  url: text("url").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // One line within a receipt, allocated against a single budget line item.
 export const receiptAllocations = pgTable("receipt_allocations", {
   id: serial("id").primaryKey(),
