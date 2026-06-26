@@ -4,7 +4,7 @@ import { receiptAllocations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { computeVerdict } from "@/lib/budget";
 
-export async function PATCH(req: Request, ctx: RouteContext<"/api/allocations/[id]">) {
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const body = await req.json();
   const { status, lineItemId, amount } = body as {

@@ -4,7 +4,7 @@ import { receiptAllocations } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { computeVerdict } from "@/lib/budget";
 
-export async function POST(_req: Request, ctx: RouteContext<"/api/receipts/[id]/confirm-all">) {
+export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const pending = await db
     .select()
