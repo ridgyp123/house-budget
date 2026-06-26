@@ -72,6 +72,15 @@ function QuotesSection({ lineItemId }: { lineItemId: number }) {
               </button>
             </div>
           ))}
+          {quotes.length > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid #E8E7E1", paddingTop: 5, marginTop: 2, fontSize: 12 }}>
+              <span style={{ flex: 1, color: "#6B6B65" }}>Forecast total</span>
+              <span style={{ fontWeight: 700, color: "#1A1A18" }}>
+                {quotes.reduce((s, q) => s + Number(q.amount), 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+              </span>
+              <span style={{ width: 18 }} />
+            </div>
+          )}
         </div>
       )}
 
