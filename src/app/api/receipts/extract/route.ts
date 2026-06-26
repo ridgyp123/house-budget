@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateObject } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { put } from "@vercel/blob";
 import { db } from "@/db";
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     .join("\n");
 
   const { object } = await generateObject({
-    model: "anthropic/claude-haiku-4.5",
+    model: anthropic("claude-haiku-4-5-20251001"),
     schema: extractionSchema,
     messages: [
       {
