@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   const { password } = await req.json();
-  if (!password || password !== process.env.AUTH_SECRET) {
+  const secret = (process.env.AUTH_SECRET ?? "").trim();
+  if (!password || password !== secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("site_auth", process.env.AUTH_SECRET!, {
+  response.cookies.set("site_auth", secret, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
