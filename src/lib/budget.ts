@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 export type LineItemSummary = {
   id: number;
   name: string;
+  notes: string | null;
   budgetAmount: number;
   committed: number;
   remaining: number;
@@ -58,6 +59,7 @@ export async function getProjectSummary(): Promise<ProjectSummary> {
         return {
           id: i.id,
           name: i.name,
+          notes: i.notes ?? null,
           budgetAmount,
           committed,
           remaining: budgetAmount - committed,

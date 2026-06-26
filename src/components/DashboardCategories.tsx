@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { categoryStatus, STATUS_COLORS } from "@/lib/budget";
-import type { CategorySummary } from "@/lib/budget";
+import type { CategorySummary, LineItemSummary } from "@/lib/budget";
 
 function money(n: number) {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -24,6 +24,73 @@ function SearchIcon() {
       <circle cx="6.5" cy="6.5" r="4.5" />
       <line x1="10.5" y1="10.5" x2="14" y2="14" />
     </svg>
+  );
+}
+
+function LineItemRow({
+  li,
+  highlightQuery,
+}: {
+  li: LineItemSummary;
+  highlightQuery: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const over = li.remaining < 0;
+  const leftColor = over ? "#D9302A" : li.committed > 0 ? "#1C9A46" : "#A8A8A0";
+  const isMatch = highlightQuery && (
+    li.name.toLowerCase().includes(highlightQuery) ||
+    (li.notes ?? "").toLowerCase().includes(highlightQuery)
+  );
+
+  return (
+    <>
+      <tr
+        style={{
+          borderTop: "1px solid #F0EFE9",
+          background: isMatch ? "#F0FAFA" : undefined,
+          cursor: li.notes ? "pointer" : undefined,
+        }}
+        onClick={() => li.notes && setExpanded((v) => !v)}
+        title={li.notes ? (expanded ? "Hide note" : "Show note") : undefined}
+      >
+        <td style={{ padding: "5px 4px 5px 0", color: "#1A1A18" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {li.name}
+            {li.notes && (
+              <span style={{ fontSize: 9, color: "#A8A8A0", userSelect: "none" }}>
+                {expanded ? "▲" : "▼"}
+              </span>
+            )}
+          </span>
+        </td>
+        <td style={{ padding: "5px 0", textAlign: "right", color: "#A8A8A0" }}>
+          {money(li.budgetAmount)}
+        </td>
+        <td style={{ padding: "5px 0", textAlign: "right", fontWeight: over ? 700 : 500, color: over ? "#D9302A" : "#1A1A18" }}>
+          {money(li.committed)}
+        </td>
+        <td style={{ padding: "5px 0", textAlign: "right", fontWeight: over ? 700 : 500, color: leftColor }}>
+          {over ? `−${money(Math.abs(li.remaining))}` : money(li.remaining)}
+        </td>
+      </tr>
+      {expanded && li.notes && (
+        <tr style={{ background: "#FAFAF7" }}>
+          <td
+            colSpan={4}
+            style={{
+              padding: "6px 8px 8px",
+              fontSize: 11,
+              color: "#6B6B65",
+              borderTop: "1px solid #F0EFE9",
+              fontStyle: "italic",
+              lineHeight: 1.5,
+            }}
+          >
+            {li.notes}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -93,45 +160,9 @@ function CategoryCard({
               </tr>
             </thead>
             <tbody>
-              {cat.lineItems.map((li) => {
-                const over = li.remaining < 0;
-                const leftColor = over ? "#D9302A" : li.committed > 0 ? "#1C9A46" : "#A8A8A0";
-                const isMatch = highlightQuery && li.name.toLowerCase().includes(highlightQuery);
-                return (
-                  <tr
-                    key={li.id}
-                    style={{
-                      borderTop: "1px solid #F0EFE9",
-                      background: isMatch ? "#F0FAFA" : undefined,
-                    }}
-                  >
-                    <td style={{ padding: "5px 4px 5px 0", color: "#1A1A18" }}>{li.name}</td>
-                    <td style={{ padding: "5px 0", textAlign: "right", color: "#A8A8A0" }}>
-                      {money(li.budgetAmount)}
-                    </td>
-                    <td
-                      style={{
-                        padding: "5px 0",
-                        textAlign: "right",
-                        fontWeight: over ? 700 : 500,
-                        color: over ? "#D9302A" : "#1A1A18",
-                      }}
-                    >
-                      {money(li.committed)}
-                    </td>
-                    <td
-                      style={{
-                        padding: "5px 0",
-                        textAlign: "right",
-                        fontWeight: over ? 700 : 500,
-                        color: leftColor,
-                      }}
-                    >
-                      {over ? `−${money(Math.abs(li.remaining))}` : money(li.remaining)}
-                    </td>
-                  </tr>
-                );
-              })}
+              {cat.lineItems.map((li) => (
+                <LineItemRow key={li.id} li={li} highlightQuery={highlightQuery} />
+              ))}
             </tbody>
             <tfoot>
               {(() => {
@@ -203,7 +234,13 @@ export function DashboardCategories({ categories }: { categories: CategorySummar
   const visible = categories
     .map((cat) => ({
       ...cat,
-      lineItems: isSearching ? cat.lineItems.filter((li) => li.name.toLowerCase().includes(q)) : cat.lineItems,
+      lineItems: isSearching
+        ? cat.lineItems.filter(
+            (li) =>
+              li.name.toLowerCase().includes(q) ||
+              (li.notes ?? "").toLowerCase().includes(q)
+          )
+        : cat.lineItems,
     }))
     .filter((cat) => !isSearching || cat.lineItems.length > 0);
 
